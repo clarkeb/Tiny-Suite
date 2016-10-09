@@ -1,0 +1,3 @@
+[submodule "tiny-suite-app"]
+	path = tiny-suite-app
+	url = git@github.com:cookieguru/tiny-suite-app.git
