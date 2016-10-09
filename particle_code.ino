@@ -11,6 +11,9 @@
 
 // Variables
 
+bool home = true;
+int testvar;
+
 // DHT variables (temp humidity sensor)
 int temperature;
 int humidity;
@@ -61,6 +64,11 @@ void setup() {
   //init motion sensor pin.
   pinMode(motion_led_pin, OUTPUT);
   pinMode(motion_sensor_pin, INPUT);
+  
+  //init particle functions.
+  Particle.function("home status", changeHomeStatus);
+  Particle.function("edit variable", changeVariable);
+  Particle.variable("testvar", testvar);
 }
 
 void loop() {
@@ -125,8 +133,10 @@ void loop() {
   delay(1000);
   Particle.publish("air quality",String(airquality));
   delay(1000);
-  Particle.publish("motion", String(motionDetected));
-  delay(1000);
+  if (!home) {
+    Particle.publish("motion", String(motionDetected));
+    delay(1000);
+  }
   Particle.publish("gas vs. air ratio", String(ratio));
 }
 
@@ -137,4 +147,33 @@ bool calibrated() {
 void setLED( int state )
 {
   digitalWrite( motion_led_pin, state );
+}
+
+int changeHomeStatus (String command) {
+  if (command == "home") {
+    home = true;
+    return 1;
+  } else if (command == "away") {
+    home = false;
+    return 2;
+  } else {
+    return -1;
+  }
+}
+
+/// takes a command string of the form 'variable=value' and sets the variable to the value.
+int changeVariable (String command) {
+  int indexvar = command.indexOf("=", 0);
+  if (indexvar > 0) {
+    // found a =
+    String varstr = command.substring(0, indexvar-1);
+    String varval = command.substring(indexvar+1);
+    varstr = varstr.toLowerCase();
+    if (varstr.equals("testvar")) {
+      testvar = varval.toInt();
+    }
+  } else {
+    varval = -1;
+  }
+  return 1;
 }
