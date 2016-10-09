@@ -1,27 +1,29 @@
 {
-  "name": "alexa-baseball-scores",
+  "name": "tiny-suite-alexa",
   "version": "1.0.0",
-  "description": "Baseball score skill for alexa",
+  "description": "TinySuite skill for alexa",
   "main": "./index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ihoegen/alexa-baseball-scores"
+    "url": "git+https://github.com/clarkeb/Tiny-Suite"
   },
   "keywords": [
     "Alexa",
     "skill",
-    "baseball",
-    "scores"
+    "Tiny",
+    "Home",
+    "Suite",
+    "IOT"
   ],
   "author": "Ian Hoegen",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/ihoegen/alexa-baseball-scores/issues"
+    "url": "https://github.com/clarkeb/Tiny-Suite/issues"
   },
-  "homepage": "https://github.com/ihoegen/alexa-baseball-scores#readme",
+  "homepage": "https://github.com/clarkeb/Tiny-Suite#readme",
   "dependencies": {
     "alexa-sdk": "^1.0.0"
   }
