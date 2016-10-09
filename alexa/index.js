@@ -25,7 +25,7 @@ var handlers = {
       }
     } catch (e) {
       console.log(e);
-      var speechOutput = e + ' Looks like an invocation error You can ask questions such as, what\'s the temperature in my home, or, you can say exit... '
+      var speechOutput = 'Looks like an invocation error ' + e + ' You can ask questions such as, what\'s the temperature in my home, or, you can say exit... '
       var repromptSpeech = 'What else can I help with?';
       speechOutput += repromptSpeech;
 
@@ -140,7 +140,7 @@ function getData(type, callback) {
           var dataValue = results[i].last_value.value;
           switch (type) {
             case 'gas':
-              callback("The gas to air ratio in your home is currently " + dataValue + " which is a " + (dataValue  > 8 ? 'good': 'bad') + ' ratio');
+              callback("The gas to air ratio in your home is currently " + dataValue + " which is a " + ((dataValue  > 5 && dataValue < 11) ? 'good': 'bad') + ' ratio');
             break;
             case 'temperature':
               callback("The temperature in your home is currently " + dataValue + " degrees fahrenheit");
@@ -152,7 +152,7 @@ function getData(type, callback) {
               callback("There is currently " + (dataValue === 0 ? 'no' : '') + " motion in your home");
             break;
             case 'air':
-              callback("The air quality in your home appears to be at a " + (dataValue  > 8 ? 'good': 'bad') + ' ratio');
+              callback("The air quality in your home appears to be at a " + ((dataValue  > 5 && dataValue < 11) ? 'good': 'bad') + ' level');
             break;
             default:
               callback("Unknown error")
