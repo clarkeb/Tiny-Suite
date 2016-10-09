@@ -1,0 +1,12 @@
+{
+  "manifest_version": 2,
+  "name": "",
+"description": "Modifies the Ubidots page for the app.",
+  "version": "1.0.0",
+  "content_scripts": [
+  {
+    "matches": ["https://app.ubidots.com/*"],
+    "css": ["styles.css"]
+  }
+]
+}

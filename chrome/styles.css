@@ -1,0 +1,34 @@
+body, .navbar, .navbar-inner {
+  background: #59dcee !important;
+}
+
+#logo-container a img, .brand img{
+  display: none;
+}
+
+#logo-container, .logo-div {
+  height: 192px;
+  width: 192px;
+  margin: 0 auto;
+  background-size: fill;
+  background-repeat: no-repeat;
+  background-image: url('https://raw.githubusercontent.com/cookieguru/tiny-suite-app/master/cordova/resources/android/drawable-xxxhdpi/ic_launcher.png');
+}
+
+.logo-div{
+  width: 45px;
+  height: 45px;
+  margin-top: 20px !important;
+  margin-left: 75px !important;
+  background-size: contain;
+}
+
+aside#logo-container {
+    margin: 0 auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.ubi-content {
+  background-color: white
+}
