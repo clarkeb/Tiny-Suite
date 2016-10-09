@@ -1,176 +1,140 @@
-// This #include statement was automatically added by the Particle IDE.
+// particle library includes
 #include "Ubidots/Ubidots.h"
-
-// This #include statement was automatically added by the Particle IDE.
 #include "Adafruit_DHT/Adafruit_DHT.h"
-#include "ADAFRUIT_DH.h"
 
-// DHT parameters
-#define DHTPIN 5
+// DHT parameters (temp humidity sensor)
 #define DHTTYPE DHT22
 
-// Ubidots parameters
+// Ubidots parameters 
 #define UBIDOTS_TOKEN "Enter_Ubidots_Token_Here"
 #define UBIDOTS_DATASOURCE_NAME "Tiny Suite"
 
 // Variables
+
+// DHT variables (temp humidity sensor)
 int temperature;
 int humidity;
 int light;
+
 // Pins
-int light_sensor_pin = A0;
+int dht_sensor_pin = 5;         // input pin for DHT sensor
+int light_sensor_pin = A0;      // input pin for light sensor
+int gas_sensor_pin = D0;        // input pin for gas sensor
+int motion_sensor_pin = D2;     // input pin for PIR sensor
+int motion_led_pin = D3;        // LED output pin
 
-float sensor_volt; 
-float RS_air; //  Get the value of RS via in a clear air
-float R0;  // Get the value of R0 via in H2
-float sensorValue;
-float RS_gas;
-float ratio;
-String airquality;
+// gas sensor variables
+float sensor_volt;              //voltage of gas sensor 
+float RS_air;                   //  value of gas sensor in air (startup calibration)
+float R0;                       // baseline sensor value
+float sensorValue;              // input from gas sensor
+float RS_gas;                   // value of gas sensor in gas (testing for gasses)
+float ratio;                    // ratio of gas to baseline value.
+                                // carbon monoxide between 1.5 and 5, propane between 0.2 and 1.5, above 5 is good, 10 is value for clean air.  
+String airquality;              // String giving air quality indication good/bad
 
-// motion sensor
-int inputPin = D2;              // choose the input pin (for PIR sensor)
-int ledPin = D3;                // LED Pin
+// motion sensor variables
 int pirState = LOW;             // we start, assuming no motion detected
 int val = 0;                    // variable for reading the pin status
 int motionDetected = 0;         // 0 if no motion, 1 if detected motion
 
-int calibrateTime = 10000;      // wait for the thingy to calibrate
+int calibrateTime = 10000;      // wait for the sensor to calibrate
 
-// DHT sensor
-DHT dht(DHTPIN, DHTTYPE);
+//init classes.
+DHT dht(dht_sensor_pin, DHTTYPE);
 Ubidots ubidots(UBIDOTS_TOKEN);
 
 void setup() {
-    
-    ubidots.setDatasourceName(UBIDOTS_DATASOURCE_NAME);
-    
-    // Start DHT sensor
-    dht.begin();
-    
-    for(int x = 0 ; x < 100 ; x++)
+  ubidots.setDatasourceName(UBIDOTS_DATASOURCE_NAME);  
+  // Start DHT sensor
+  dht.begin();
+  //calibrate gas sensor  
+  for(int i = 0 ; i < 100 ; i++)
     {
-      sensorValue = sensorValue + analogRead(D0);
+      sensorValue = sensorValue + analogRead(gas_sensor_pin);
     }
   sensorValue = sensorValue/100.0;
-  /*
-    -----------------------------------------------
-  */
   sensor_volt = sensorValue/1024*5.0;
-  RS_air = (5.0 - sensor_volt)/sensor_volt; //omit *RL
-  R0 = RS_air/10.0; // The ratio of RS/R0 is 10 in a clear air
+  RS_air = (5.0 - sensor_volt)/sensor_volt;
+  R0 = RS_air/10.0; // The ratio of RS/R0 is 10 in clear air
   
-  pinMode( ledPin, OUTPUT );
-  pinMode(inputPin, INPUT);     // declare sensor as input
+  //init motion sensor pin.
+  pinMode(motion_led_pin, OUTPUT);
+  pinMode(motion_sensor_pin, INPUT);
 }
-void loop() {
-    
-    // Humidity measurement
-    temperature = dht.getTempFarenheit();
-    // temperature = 10;
-    
-    // Humidity measurement
-    humidity = dht.getHumidity();
-    
-    // Light level measurement
-    float light_measurement = analogRead(light_sensor_pin);
-    light = (int)(light_measurement/4096*100);
-    
-    // Publish data
-    Particle.publish("temperature", String(temperature) + " °F");
-    delay(1000);
-    Particle.publish("humidity", String(humidity) + "%");
-    delay(1000);
-    Particle.publish("light", String(light) + "%");
-    delay(1000);
-    
-     sensorValue = analogRead(D0);
-    sensor_volt=(float)sensorValue/1024*5.0;
-    RS_gas = (5.0 - sensor_volt)/sensor_volt; // omit *RL
-  /*
-    -
-    Replace the name "R0" with the value of R0 in the demo of First Test 
-    -
-  */
-  ratio = RS_gas/R0;  // ratio = RS/R0 
-  /*
-    ------------------------------
-    -----------------------------------------
-  */
-  //https://build.particle.io/build/57f984d70280dde53900063d#verify
-  //Particle.publish("sensor voltage", String(sensor_volt)+ " v");
-  //delay(1000);
-  //Particle.publish("RS ratio", String(RS_gas));
-  //delay(1000);
-  //Particle.publish("gas vs. air ratio RS/R0", String(ratio));
-  if (ratio >= 5) {
-      airquality = "good";
-  Particle.publish("air quality",String(airquality));
-  }
-  else 
-  {
-      airquality = "unhealthy";
-    Particle.publish("air quality",String(airquality));
-  }
-  ubidots.add("gas vs. air ratio", ratio); // carbon monoxide between 1.5 and 5, propane between 0.2 and 1.5, above 5 is good
-  ubidots.sendAll();
-  // if the sensor is calibrated
-  if ( calibrated() )
-  {
-  // get the data from the sensor
-    readTheSensor();
 
-    // report it out, if the state has changed
-    reportTheData();
+void loop() {
+  
+  // Get measurements.
+
+  // Temperature measurement
+  temperature = dht.getTempFarenheit();
+  // Humidity measurement
+  humidity = dht.getHumidity();
+  // Light level measurement
+  float light_measurement = analogRead(light_sensor_pin);
+  light = (int)(light_measurement/4096*100);
+  // Gas level measurement
+  sensorValue = analogRead(gas_sensor_pin);
+  sensor_volt=(float)sensorValue/1024*5.0;
+  RS_gas = (5.0 - sensor_volt)/sensor_volt; // omit *RL
+  ratio = RS_gas/R0;
+  // Motion sensor measurement
+  if (calibrated()) {
+    val = digitalRead(motion_sensor_pin);
   }
   
+  //process measurements.
+  
+  // Gas level processing
+  if (ratio >= 5.0) {
+    airquality = "Good";
+  } else {
+    airquality = "Unhealthy";
+  }
+  // Motion sensor processing
+  if (val == HIGH) {
+    motionDetected = 1;
+    if (pirState == LOW) {
+      pirState = HIGH;
+      setLED(pirState);
+    }
+  } else {
+    motionDetected = 0;
+    if (pirState == HIGH) {
+      pirState = LOW;
+      setLED(pirState);
+    }
+  }
+
+  // Add all the ubidots info we will be publishing and then send.
   ubidots.add("temperature", temperature);
   ubidots.add("humidity", humidity);
   ubidots.add("light", light);
+  ubidots.add("motion", motionDetected);
+  ubidots.add("gas vs. air ratio", ratio); 
+  // carbon monoxide between 1.5 and 5, propane between 0.2 and 1.5, above 5 is good
   ubidots.sendAll();
-}
-
-void readTheSensor() {
-  val = digitalRead(inputPin);
+  
+  // Publish data through particle's publish
+  Particle.publish("temperature", String(temperature) + " °F");
+  delay(1000);
+  Particle.publish("humidity", String(humidity) + "%");
+  delay(1000);
+  Particle.publish("light", String(light) + "%");
+  delay(1000);
+  Particle.publish("air quality",String(airquality));
+  delay(1000);
+  Particle.publish("motion", String(motionDetected));
+  delay(1000);
+  Particle.publish("gas vs. air ratio", String(ratio));
 }
 
 bool calibrated() {
   return millis() - calibrateTime > 0;
 }
 
-void reportTheData() {
-
-  // if the sensor reads high
-  // or there is now motion
-  if (val == HIGH) {
-    motionDetected = 1;
-    Particle.publish("motion", String(motionDetected));
-    ubidots.add("motion", motionDetected);
-    ubidots.sendAll();
-    // the current state is no motion
-    // i.e. it's just changed
-    // announce this change by publishing an eent
-    if (pirState == LOW) {
-      // we have just turned on
-      // Update the current state
-      pirState = HIGH;
-      setLED( pirState );
-    }
-  } else {
-      motionDetected = 0;
-      Particle.publish("motion", String(motionDetected));
-    ubidots.add("motion", motionDetected);
-    ubidots.sendAll();
-    if (pirState == HIGH) {
-      // we have just turned of
-      // Update the current state
-      pirState = LOW;
-      setLED( pirState );
-    }
-  }
-}
-
 void setLED( int state )
 {
-  digitalWrite( ledPin, state );
+  digitalWrite( motion_led_pin, state );
 }
