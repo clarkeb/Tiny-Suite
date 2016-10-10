@@ -6,13 +6,13 @@
 #define DHTTYPE DHT22
 
 // Ubidots parameters 
-#define UBIDOTS_TOKEN "Enter_Ubidots_Token_Here"
+#define UBIDOTS_TOKEN "your_ubidots_token_here"
 #define UBIDOTS_DATASOURCE_NAME "Tiny Suite"
 
 // Variables
 
 bool home = true;
-int testvar;
+int testvar = 0;
 
 // DHT variables (temp humidity sensor)
 int temperature;
@@ -42,6 +42,7 @@ int val = 0;                    // variable for reading the pin status
 int motionDetected = 0;         // 0 if no motion, 1 if detected motion
 
 int calibrateTime = 10000;      // wait for the sensor to calibrate
+int oldMotion;
 
 //init classes.
 DHT dht(dht_sensor_pin, DHTTYPE);
@@ -66,9 +67,15 @@ void setup() {
   pinMode(motion_sensor_pin, INPUT);
   
   //init particle functions.
-  Particle.function("home status", changeHomeStatus);
-  Particle.function("edit variable", changeVariable);
+  Particle.function("home_status", changeHomeStatus);
+  Particle.function("edit_var", changeVariable);
   Particle.variable("testvar", testvar);
+  Particle.variable("home_var", home);
+  
+  
+  setLED(HIGH);
+  delay(1000);
+  setLED(LOW);
 }
 
 void loop() {
@@ -81,7 +88,7 @@ void loop() {
   humidity = dht.getHumidity();
   // Light level measurement
   float light_measurement = analogRead(light_sensor_pin);
-  light = (int)(light_measurement/4096*100);
+  light = (int)(light_measurement);
   // Gas level measurement
   sensorValue = analogRead(gas_sensor_pin);
   sensor_volt=(float)sensorValue/1024*5.0;
@@ -95,31 +102,44 @@ void loop() {
   //process measurements.
   
   // Gas level processing
-  if (ratio >= 5.0) {
+  if ((ratio >= 5.0) && (ratio <= 11)) {
     airquality = "Good";
   } else {
     airquality = "Unhealthy";
   }
   // Motion sensor processing
-  if (val == HIGH) {
-    motionDetected = 1;
-    if (pirState == LOW) {
-      pirState = HIGH;
-      setLED(pirState);
+  oldMotion = motionDetected;
+  if(!home) {
+    if (val == HIGH) {
+      motionDetected = 1;
+      if (pirState == LOW) {
+        pirState = HIGH;
+        //setLED(pirState);
+      }
+    } else {
+      motionDetected = 0;
+      if (pirState == HIGH) {
+        pirState = LOW;
+        //setLED(pirState);
+      }
     }
   } else {
     motionDetected = 0;
-    if (pirState == HIGH) {
-      pirState = LOW;
-      setLED(pirState);
-    }
   }
 
   // Add all the ubidots info we will be publishing and then send.
   ubidots.add("temperature", temperature);
-  ubidots.add("humidity", humidity);
+  if (humidity <= 100) {
+    ubidots.add("humidity", humidity);
+  } 
   ubidots.add("light", light);
   ubidots.add("motion", motionDetected);
+  ubidots.add("newMotion", 0);
+  if (!home) {
+    if (!oldMotion && motionDetected) {
+      ubidots.add("newMotion", 1);
+    }
+  }
   ubidots.add("gas vs. air ratio", ratio); 
   // carbon monoxide between 1.5 and 5, propane between 0.2 and 1.5, above 5 is good
   ubidots.sendAll();
@@ -127,9 +147,11 @@ void loop() {
   // Publish data through particle's publish
   Particle.publish("temperature", String(temperature) + " °F");
   delay(1000);
-  Particle.publish("humidity", String(humidity) + "%");
-  delay(1000);
-  Particle.publish("light", String(light) + "%");
+  if (humidity <= 100) {
+    Particle.publish("humidity", String(humidity) + "%");
+    delay(1000);
+  }
+  Particle.publish("light", String(light) + " lux");
   delay(1000);
   Particle.publish("air quality",String(airquality));
   delay(1000);
@@ -150,10 +172,13 @@ void setLED( int state )
 }
 
 int changeHomeStatus (String command) {
-  if (command == "home") {
+  blink(500);
+  setLED(LOW);
+  if (command.equals("home")) {
+    blink(500);
     home = true;
     return 1;
-  } else if (command == "away") {
+  } else if (command.equals("away")) {
     home = false;
     return 2;
   } else {
@@ -166,14 +191,21 @@ int changeVariable (String command) {
   int indexvar = command.indexOf("=", 0);
   if (indexvar > 0) {
     // found a =
-    String varstr = command.substring(0, indexvar-1);
+    String varstr = command.substring(0, indexvar);
     String varval = command.substring(indexvar+1);
     varstr = varstr.toLowerCase();
     if (varstr.equals("testvar")) {
+      blink(1000);
       testvar = varval.toInt();
     }
   } else {
-    varval = -1;
+    return -1;
   }
   return 1;
+}
+
+void blink(int length) {
+  setLED(HIGH);
+  delay(length);
+  setLED(LOW);
 }
